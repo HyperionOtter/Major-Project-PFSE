@@ -1,6 +1,8 @@
 # IMPORTS 
 import math
 import plotly.express as px 
+import plotly.graph_objects as go 
+from shapely import (Point, LineString, Polygon, LinearRing, MultiPoint, MultiLineString, MultiPolygon, GeometryCollection)
 
 
 def deep_transfer_calc(P_DL:float, P_LL:float, l:float, a:float, h:float, b:float, fc:float, fy=60, tie_size =8,
@@ -158,11 +160,31 @@ def deep_transfer_calc(P_DL:float, P_LL:float, l:float, a:float, h:float, b:floa
     # Plot Shear and Moment Diagrams 
 
     # Shear Diagram 
-    fig = px.line(x=[0,a,a,l], y=[r1, r1, r1-Pu,-r2])
-    fig.show()
+    x = [0,0, a, a, l,l]
+    y = [0, r1, r1, r1-Pu, -r2, 0]
+    shear_fig = go.Figure(data=go.Scatter(x=x, y=y, mode = "lines+markers", line = dict(color='red')))
+    shear_fig.update_layout(title = 'Shear Diagram',
+                            xaxis_title = 'Position - x',
+                            yaxis_title = 'Shear - Vu'
+                            )
 
-    # Moment Diagram
     
+    
+    # Moment Diagram
+    x = [0,a,l]
+    y = [0, (-Pu*a*b)/l, 0]
+    moment_fig = go.Figure(data=go.Scatter(x=x, y=y, mode = "lines+markers", line = dict(color='blue')))
+    moment_fig.update_layout(title = 'Moment Diagram',
+                            xaxis_title = 'Position - x',
+                            yaxis_title = 'Moment - Mu'
+                            )
+
+    # Shapely Beam Model 
+
+
+    beam_poly = Polygon([(0,0), (0,h), (l,h),(l,0)])
+    
+
     # Provide plots/graphics of node geometry 
     
     # Tie Reinforcement 
@@ -173,6 +195,7 @@ def deep_transfer_calc(P_DL:float, P_LL:float, l:float, a:float, h:float, b:floa
     num_tie = math.ceil(A_s_req/tie_area) 
 
     A_s = num_tie*tie_area
-    
 
-# deep_transfer_calc(P_DL = 180, P_LL = 250, l=13.33,a=6.67,h=60,b=20,fc=4000)
+    results_dict = {'Phi-Vn': phi_Vn, 'Number of ties':num_tie, 'Beam Model': beam_poly, "Shear Diagram": shear_fig, 'Moment Diagram': moment_fig}
+
+    return results_dict
