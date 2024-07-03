@@ -3,8 +3,11 @@ import math
 import plotly.express as px 
 import plotly.graph_objects as go 
 from shapely import (Point, LineString, Polygon, LinearRing, MultiPoint, MultiLineString, MultiPolygon, GeometryCollection)
+from beam_analysis import beam_load_analysis
 
 
+
+    
 def deep_transfer_calc(P_DL:float, P_LL:float, l:float, a:float, h:float, b:float, fc:float, fy=60, tie_size =8,
                        stirrup_size = 5, skin_size=5, stirrup_legs = 2, col1=24.0, col2=24.0):
     '''
@@ -40,17 +43,8 @@ def deep_transfer_calc(P_DL:float, P_LL:float, l:float, a:float, h:float, b:floa
     r2 = (Pu*a)/l
     v1 = r1 
     v2 = r2 
-    print(f'r1={r1}')
-    print(f'r2={r2}')
 
-    # Deep Beam Check 
-    deep_beam_check = False 
-    ln = l
-    if ln/h < 4: 
-        deep_beam_check = True 
-    
-    if deep_beam_check == False: 
-        print('Based on given geometry, this is not considered a deep beam per ACI 318-14 9.9.1.1')
+
 
     # Initialize Depth to Node Centroids 
     d = 50
@@ -180,7 +174,6 @@ def deep_transfer_calc(P_DL:float, P_LL:float, l:float, a:float, h:float, b:floa
                             )
 
     # Shapely Beam Model 
-
 
     beam_poly = Polygon([(0,0), (0,h), (l,h),(l,0)])
     
