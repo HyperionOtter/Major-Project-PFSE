@@ -6,6 +6,7 @@ from deep_transfer_app import deep_transfer_calc
 import numpy as np
 from beam_analysis import beam_load_analysis
 from rc_beam_design import rc_beam_design
+import math
 
 # Streamlit UI 
 
@@ -40,47 +41,16 @@ stirrup_legs_stream = st.sidebar.selectbox("Number of Stirrup Legs", options=leg
 skin_bar_sizes = [4,5,6,7,8]
 skin_bar_size_stream = st.sidebar.selectbox("Skin Bar Size", options=skin_bar_sizes)
 
-# Input Validation 
 
-try: results = beam_load_analysis(P_DL=P_DL_stream, P_LL=P_LL_stream,l=l_stream,a=a_stream,h=h_stream,
-                   b=b_stream,col1=c1_stream,col2=c2_stream)
-except ZeroDivisionError: 
-     st.header('Confirm all inputs are valid')
-
-
-
-# Run Beam Load Analysis Function to get Load Diagrams and Beam Model 
-
-# results = beam_load_analysis(P_DL=P_DL_stream, P_LL=P_LL_stream,l=l_stream,a=a_stream,h=h_stream,
-#                    b=b_stream,col1=c1_stream,col2=c2_stream)
-
-
-# Deep Beam Check
-
-if results["Deep Beam"] == True: 
-    st.markdown('Beam is considered a deep beam per ACI 318-14 9.9.1.1 Strut and Tie will be used for analysis/design')
-
-    try: 
-
-        design_results = deep_transfer_calc(P_DL=P_DL_stream, P_LL=P_LL_stream,l=l_stream,a=a_stream,h=h_stream,
-                   b=b_stream,fc=concrete_strength,fy=yield_strength,tie_size=tie_size_stream,
-                   stirrup_size=stirrup_size_stream, skin_size=skin_bar_size_stream,
-                   stirrup_legs=stirrup_legs_stream,col1=c1_stream,col2=c2_stream)
-    except ZeroDivisionError: 
-         st.subheader('It looks like there is a zero division error, confirm all inputs are filled in')
-    
-
-    
-    
-else: 
-    # design_results = rc_beam_design(fc = concrete_strength, fy=yield_strength, b = b_stream, h=h_stream, Mu=)
-    st.markdown('Based on given geometry, this is not considered a deep beam per ACI 318-14 9.9.1.1 Bernoulli Theory will be used for analysis/design')
-
-
-# Plot Figures 
-
-
+# Function to plot beam model from shapely polygon - defined in beam analysis function
 def create_plot(polygon, l):
+        '''
+        Function to create a plotly plot of the conceptual beam model for illustrative purposes, 
+        includes beam block, a pin support on the left side of the beam and a roller on the right side, 
+        also includes an arrow for the point load. 
+        Returns a plotly figure of the beam model 
+        
+        '''
         x, y = polygon.exterior.xy
         x = list(x)  # Convert to list
         y = list(y)  # Convert to list
@@ -124,43 +94,124 @@ def create_plot(polygon, l):
             xaxis_title="Beam Span (ft)",
             yaxis_title="Beam Height (in)",
             showlegend=False,
+            width = 600,
+            height = 500,
             xaxis=dict(
-                range=[-1, l+2],  # Specify the x-axis range
+                range=[-1, l+1],  # Specify the x-axis range
                 scaleanchor="y",
                 scaleratio=12,
             ),
             yaxis=dict(
                 visible = False,
-                range = [0, l+20],
+                range = [-1, h_stream+1],
                 scaleanchor="x",
                 scaleratio=1,
             ),
         )
         return fig  
+tab1, tab2, tab3 = st.tabs(["Beam Analysis", "Strut and Tie Design", "Bernoulli Beam Design"])
 
 
 
+# Run Beam Load Analysis Function to get Load Diagrams and Beam Model 
+
+try: results = beam_load_analysis(P_DL=P_DL_stream, P_LL=P_LL_stream,l=l_stream,a=a_stream,h=h_stream,
+                   b=b_stream,col1=c1_stream,col2=c2_stream)
+except ZeroDivisionError: 
+     st.header('Confirm all inputs are valid')
+d = .9*h_stream
+Phi_Vn_Max = (.75*10*math.sqrt(concrete_strength)*b_stream*d)/1000 # kips
+
+#_______________________________Plot Analysis Figures __________________________________#
 
 # Plot Beam Conceptual Model 
 beam_poly = results['Beam_Poly']
 beam_plot = create_plot(polygon = beam_poly, l = l_stream)
-beam_fig = st.plotly_chart(beam_plot)
-
-# Plot Supports and Point Load 
-
 
 # Shear Diagram 
 shear_fig = results['Shear Diagram']
-shear_diagram = st.plotly_chart(shear_fig)
 
 #Moment Diagram 
 moment_fig = results['Moment Diagram']
-moment_diagram = st.plotly_chart(moment_fig)
+
+with tab1:
+     beam_fig = st.plotly_chart(beam_plot)
+     shear_diagram = st.plotly_chart(shear_fig)
+     moment_diagram = st.plotly_chart(moment_fig)
+    
+# Deep Beam Check
+
+if results["Deep Beam"] == True: 
+    with tab3: 
+         st.markdown('Beam is considered a deep beam per ACI 318-14 9.9.1.1 Strut and Tie will be used for analysis/design')
+    if max(results['R1'], results['R2'])> Phi_Vn_Max:
+         st.markdown("Beam exceeds maximum shear strength per ACI 318-14 Eq. 9.9.2.1")
+
+    try: 
+
+        design_results = deep_transfer_calc(P_DL=P_DL_stream, P_LL=P_LL_stream,l=l_stream,a=a_stream,h=h_stream,
+                   b=b_stream,fc=concrete_strength,fy=yield_strength,tie_size=tie_size_stream,
+                   stirrup_size=stirrup_size_stream, skin_size=skin_bar_size_stream,
+                   stirrup_legs=stirrup_legs_stream,col1=c1_stream,col2=c2_stream)
+    except ZeroDivisionError: 
+         st.subheader('It looks like there is a zero division error, confirm all inputs are filled in')
+    
+    st_model = design_results["Strut and Tie Model"]
+
+    # Alpha Angles 
+    alpha_1 = design_results["alpha_1"]
+    alpha_2 = design_results["alpha_2"]
+
+    with tab2: 
+        st.markdown('Beam is considered a deep beam per ACI 318-14 9.9.1.1 Strut and Tie will be used for analysis/design')
+        st_fig = st.plotly_chart(st_model)
+
+        # Plot Node Figures 
+        node_a_fig = st.plotly_chart(design_results['Node A Figure'])
+        node_b_fig = st.plotly_chart(design_results['Node B Figure'])
+        node_c_fig = st.plotly_chart(design_results['Node C Figure'])
+
+        # Results Outputs 
+        st.markdown('**Number of Ties/Tension Bars Required:**')
+        st.markdown(design_results['Number of ties'])
+
+        #  Alpha Angle Check 
+        if math.degrees(alpha_1)< 25: 
+            st.markdown('Alpha 1 is less than 25 degrees, as per ACI 318-14. The angle between the axes of any strut and any tie entering a single node shall be at least 25 degrees')
+            st.markdown('Revise Beam Geometry to Correct Alpha 1')
+        else: 
+            st.markdown('Alpha 1 is greater than 25 degrees, as per ACI 318-14.')
+            st.markdown('OK')
+        if math.degrees(alpha_2)< 25: 
+            st.markdown('Alpha 2 is less than 25 degrees, as per ACI 318-14. The angle between the axes of any strut and any tie entering a single node shall be at least 25 degrees')
+            st.markdown('Revise Beam Geometry to Correct Alpha 2')
+        else: 
+            st.markdown('Alpha 2 is greater than 25 degrees, as per ACI 318-14.')
+            st.markdown('OK')
 
 
-# Results Outputs 
-st.markdown('**Number of Ties/Tension Bars Required:**')
-# st.markdown(results['Number of ties'])
+    
+else: 
+    # design_results = rc_beam_design(fc = concrete_strength, fy=yield_strength, b = b_stream, h=h_stream, Mu=)
+    with tab2: 
+         st.markdown('Based on given geometry, this is not considered a deep beam per ACI 318-14 9.9.1.1 Bernoulli Theory will be used for analysis/design')
+    with tab3: 
+        st.markdown('Based on given geometry, this is not considered a deep beam per ACI 318-14 9.9.1.1 Bernoulli Theory will be used for analysis/design')
+
+
+
+     
+
+
+
+
+
+
+
+
+
+
+
 
 
 

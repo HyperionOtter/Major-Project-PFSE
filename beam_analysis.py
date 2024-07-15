@@ -29,7 +29,7 @@ def beam_load_analysis(P_DL:float, P_LL:float, l:float, a:float, h:float, b:floa
     """
 
     # Calculate Contribution of Beam Self Weight and add to point load
-    sw = 150*(h/12)*(b/12)*(l)/1000  # Calculates self weight of beam
+    sw = 150*(h/12)*(b/12)*(l+col1/24 + col2/24)/1000  # Calculates self weight of beam
 
     P_DL_total = P_DL + sw # Adds self weight to dead load reaction 
 
@@ -42,6 +42,7 @@ def beam_load_analysis(P_DL:float, P_LL:float, l:float, a:float, h:float, b:floa
     # Determine Reactions on Deep Beam 
     b1 = l-a
     r1 = (Pu*b1)/l
+    print(f'r1_analysis = {r1}')
     r2 = (Pu*a)/l
     v1 = r1 
     v2 = r2 
@@ -54,7 +55,9 @@ def beam_load_analysis(P_DL:float, P_LL:float, l:float, a:float, h:float, b:floa
     shear_fig_db = go.Figure(data=go.Scatter(x=x, y=y, mode = "lines+markers", line = dict(color='red')))
     shear_fig_db.update_layout(title = 'Shear Diagram',
                             xaxis_title = 'Position - x',
-                            yaxis_title = 'Shear - Vu'
+                            yaxis_title = 'Shear - Vu', 
+                            width = 575, 
+                            height = 500
                             )
 
     
@@ -64,7 +67,9 @@ def beam_load_analysis(P_DL:float, P_LL:float, l:float, a:float, h:float, b:floa
     moment_fig_db = go.Figure(data=go.Scatter(x=x, y=y, mode = "lines+markers", line = dict(color='blue')))
     moment_fig_db.update_layout(title = 'Moment Diagram',
                             xaxis_title = 'Position - x',
-                            yaxis_title = 'Moment - Mu'
+                            yaxis_title = 'Moment - Mu', 
+                            width = 575, 
+                            height = 500
                             )
 
     # Shapely Beam Model 
@@ -118,7 +123,7 @@ def beam_load_analysis(P_DL:float, P_LL:float, l:float, a:float, h:float, b:floa
     # Check whether it is a bernoulli beam or a deep beam 
     if (l*12)/h <= 4: 
         deep_beam = True 
-        load_results = {'Pu': Pu, 'Beam_Poly': beam_poly, 'Deep Beam': deep_beam, 'Shear Diagram': shear_fig_db, 'Moment Diagram': moment_fig_db}
+        load_results = {'Pu': Pu, 'Beam_Poly': beam_poly, 'Deep Beam': deep_beam, 'Shear Diagram': shear_fig_db, 'Moment Diagram': moment_fig_db, 'R1':r1, 'R2': r2}
     else: 
         deep_beam = False 
         load_results = {'Pu': Pu_bb, 'Beam_Poly': beam_poly, 'Deep Beam': deep_beam, 'Shear Diagram': shear_fig_bb, 'Moment Diagram': moment_fig_bb}
