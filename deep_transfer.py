@@ -170,10 +170,15 @@ if results["Deep Beam"] == True:
         node_a_fig = st.plotly_chart(design_results['Node A Figure'])
         node_b_fig = st.plotly_chart(design_results['Node B Figure'])
         node_c_fig = st.plotly_chart(design_results['Node C Figure'])
+        test_fig = st.plotly_chart(design_results['Test Fig'])
+
+        # Plot Reinforcement Diagram 
+        reinf_fig = design_results["Reinforcement Diagram"]
+        reinf_plot = st.plotly_chart(reinf_fig)
 
         # Results Outputs 
-        st.markdown('**Number of Ties/Tension Bars Required:**')
-        st.markdown(design_results['Number of ties'])
+        # st.markdown('**Number of Ties/Tension Bars Required:**')
+        # st.markdown(design_results['Number of ties'])
 
         #  Alpha Angle Check 
         if math.degrees(alpha_1)< 25: 
@@ -194,10 +199,16 @@ if results["Deep Beam"] == True:
 else: 
     # design_results = rc_beam_design(fc = concrete_strength, fy=yield_strength, b = b_stream, h=h_stream, Mu=)
     with tab2: 
-         st.markdown('Based on given geometry, this is not considered a deep beam per ACI 318-14 9.9.1.1 Bernoulli Theory will be used for analysis/design')
-    with tab3: 
         st.markdown('Based on given geometry, this is not considered a deep beam per ACI 318-14 9.9.1.1 Bernoulli Theory will be used for analysis/design')
 
+             
+    with tab3: 
+        st.markdown('Based on given geometry, this is not considered a deep beam per ACI 318-14 9.9.1.1 Bernoulli Theory will be used for analysis/design')
+        try: 
+            design_results = rc_beam_design(concrete_strength, yield_strength, b_stream, h_stream, results['Mu'], results['Vu'], l_stream, tie_size_stream)
+            st.markdown(f'Number of Bottom Bars Required = {design_results['Number of ties']}')
+        except ZeroDivisionError:
+             st.subheader('It looks like there is a zero division error, confirm all inputs are filled in')
 
 
      

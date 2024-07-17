@@ -42,7 +42,6 @@ def beam_load_analysis(P_DL:float, P_LL:float, l:float, a:float, h:float, b:floa
     # Determine Reactions on Deep Beam 
     b1 = l-a
     r1 = (Pu*b1)/l
-    print(f'r1_analysis = {r1}')
     r2 = (Pu*a)/l
     v1 = r1 
     v2 = r2 
@@ -67,7 +66,7 @@ def beam_load_analysis(P_DL:float, P_LL:float, l:float, a:float, h:float, b:floa
     moment_fig_db = go.Figure(data=go.Scatter(x=x, y=y, mode = "lines+markers", line = dict(color='blue')))
     moment_fig_db.update_layout(title = 'Moment Diagram',
                             xaxis_title = 'Position - x',
-                            yaxis_title = 'Moment - Mu', 
+                            yaxis_title = 'Moment - Mu (kip-ft)', 
                             width = 575, 
                             height = 500
                             )
@@ -91,12 +90,6 @@ def beam_load_analysis(P_DL:float, P_LL:float, l:float, a:float, h:float, b:floa
     x_diagram = np.linspace(0, l)
     y_bb = linearly_decreasing_with_step(x_diagram, a, l, r1_bb,  r2_bb, sw_line, Pu_bb)
 
-    print(f"P_DL = {P_DL}")
-    print(f"P_LL = {P_LL}")
-    print (f"sw_line = {sw_line}")
-    print(f"Pu_bb = {Pu_bb}")
-    print(f"r1_bb = {r1_bb}")
-
     Vu_bb = max(r1, r2)
 
     # Shear Diagram 
@@ -104,11 +97,12 @@ def beam_load_analysis(P_DL:float, P_LL:float, l:float, a:float, h:float, b:floa
     shear_fig_bb = go.Figure(data=go.Scatter(x=x_diagram, y=y_bb, mode = "lines", line = dict(color='red')))
     shear_fig_bb.update_layout(title = 'Shear Diagram',
                             xaxis_title = 'Position - x',
-                            yaxis_title = 'Shear - Vu'
+                            yaxis_title = 'Shear - Vu (kip)'
                             )
     
     # Moment Diagram
-    Mu_bb = Pu*a*b + (sw_line*l**2)/8
+    Mu_bb = Pu*a*b/(l)  + (sw_line*l**2)/8
+    print(f"Mu_bb = {Mu_bb}")
     x = [0,a,l]
     y = [0, (-Pu*a*b)/l, 0]
     moment_fig_bb = go.Figure(data=go.Scatter(x=x, y=y, mode = "lines+markers", line = dict(color='blue')))
@@ -126,6 +120,6 @@ def beam_load_analysis(P_DL:float, P_LL:float, l:float, a:float, h:float, b:floa
         load_results = {'Pu': Pu, 'Beam_Poly': beam_poly, 'Deep Beam': deep_beam, 'Shear Diagram': shear_fig_db, 'Moment Diagram': moment_fig_db, 'R1':r1, 'R2': r2}
     else: 
         deep_beam = False 
-        load_results = {'Pu': Pu_bb, 'Beam_Poly': beam_poly, 'Deep Beam': deep_beam, 'Shear Diagram': shear_fig_bb, 'Moment Diagram': moment_fig_bb}
+        load_results = {'Pu': Pu_bb, 'Beam_Poly': beam_poly, 'Deep Beam': deep_beam, 'Shear Diagram': shear_fig_bb, 'Moment Diagram': moment_fig_bb, 'Vu': Vu_bb, 'Mu':Mu_bb}
 
     return load_results

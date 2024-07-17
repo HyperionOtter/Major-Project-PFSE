@@ -9,8 +9,9 @@ import numpy as np
 
 
     
-def deep_transfer_calc(P_DL:float, P_LL:float, l:float, a:float, h:float, b:float, fc:float, fy=60, tie_size =8,
+def deep_transfer_calc(P_DL:float, P_LL:float, l:float, a:float, h=40, b=20, fc=4000, fy=60, tie_size =8,
                        stirrup_size = 5, skin_size=5, stirrup_legs = 2, col1=24.0, col2=24.0):
+    import math 
     '''
     Calculates capacity of simply supported transfer beam with a single point load 
     in accordance with ACI 318-14 Chapter 23 using the strut and tie method for 
@@ -57,7 +58,6 @@ def deep_transfer_calc(P_DL:float, P_LL:float, l:float, a:float, h:float, b:floa
 
     # Calculate Strut/Tie Lengths
     L_ac = math.sqrt((a*12)**2 + (d)**2)
-    print(f"L_ac = {L_ac}")
     L_bc = math.sqrt((b1*12)**2 + d**2)
     L_ab = (a*12)+(b1*12)
 
@@ -65,15 +65,13 @@ def deep_transfer_calc(P_DL:float, P_LL:float, l:float, a:float, h:float, b:floa
     # Calculate Force in Struts 
     F_ac = (r1*L_ac)/(d)
     F_bc = (r2*L_bc)/d
-    print(f"Fac = {F_ac}")
 
     F_ab = r1*((a*12)/(d)) # Tie Force 
-    print(f"tie fohhrce = {F_ab}")
+    
 
     # Check angle between diagonal struts and horizontal tie 
-    strut_1_alpha = math.atan(d/(a*12))
-    print(F'alpha 1 = {strut_1_alpha}')
-    strut_2_alpha = math.atan(d/(b1*12))
+    strut_1_alpha = math.atan((d-cover)/(a*12))
+    strut_2_alpha = math.atan((d-cover)/(b1*12))
     
     # Check/Provide Vertical and Horizontal Reinforcement to Resist Splitting of STM Diagonal Struts 
     s_req = round(min(d/5, 12)) # Minimum spacing of skin reinforcement
@@ -111,9 +109,7 @@ def deep_transfer_calc(P_DL:float, P_LL:float, l:float, a:float, h:float, b:floa
     # Node C Geometry 
     l_horz_c = (Pu*1000)/(.75*fce_c*b)
     print(f'Pu = {Pu}')
-    print(f'l_horz_c = {l_horz_c}')
     l_dia_c_1 = l_horz_c*(F_ac/Pu)
-    print(f'l_dia_c1 = {l_dia_c_1}')
     l_dia_c_2 = l_horz_c*(F_bc/Pu)
     l_vert_c_1 = math.sqrt(l_dia_c_1**2 - (l_horz_c/2))
     
@@ -130,9 +126,7 @@ def deep_transfer_calc(P_DL:float, P_LL:float, l:float, a:float, h:float, b:floa
     
 
     # Node B Geometry
-    print(f'fce_b = {fce_b}')
     l_vert_b = (F_ab*1000)/(.75*fce_b*b)
-    print(f' l_vert_b = {l_vert_b}')
     l_horz_b = (r2*1000)/(.75*fce_b*b)
     l_dia_b = math.sqrt(l_vert_b**2 + l_horz_b**2)
 
@@ -201,38 +195,44 @@ def deep_transfer_calc(P_DL:float, P_LL:float, l:float, a:float, h:float, b:floa
                                  line = dict(color='black', dash = 'dash')))
     
     # Strut AC 
-    fig.add_trace(go.Scatter(x=[0, a], y =[h-d, h-cover], mode = 'lines',
+    fig.add_trace(go.Scatter(x=[0, a-l_horz_c/48], y =[h-d, h-l_vert_c_1/2], mode = 'lines',
                                  line = dict(color='black')))   
     
     # Strut BC 
-    fig.add_trace(go.Scatter(x=[a, l], y =[h-cover, h-d], mode = 'lines',
+    fig.add_trace(go.Scatter(x=[a+l_horz_c/48, l], y =[h-l_vert_c_1/2, h-d], mode = 'lines',
                                  line = dict(color='black')))   
 
     # Add figures for nodes 
     # Node C 
-    fig.add_trace(go.Scatter(x=[a-(l_horz_c/2)/12, a+(l_horz_c/2)/12], y =[h-cover, h-cover], mode = 'lines',
+    fig.add_trace(go.Scatter(x=[a-(l_horz_c/2)/12, a+(l_horz_c/2)/12], y =[h, h], mode = 'lines',
                                  line = dict(color='black')))  
-    fig.add_trace(go.Scatter(x=[a-(l_horz_c/2)/12, a], y =[h-cover, h-cover-l_vert_c_1/12], mode = 'lines',
+    fig.add_trace(go.Scatter(x=[a-(l_horz_c/2)/12, a], y =[h, h-l_vert_c_1], mode = 'lines',
                                  line = dict(color='black')))
-    fig.add_trace(go.Scatter(x=[a+(l_horz_c/2)/12, a], y =[h-cover, h-cover-l_vert_c_1/12], mode = 'lines',
+    fig.add_trace(go.Scatter(x=[a+(l_horz_c/2)/12, a], y =[h, h-l_vert_c_1], mode = 'lines',
                                  line = dict(color='black')))
     
     # Node A
-    fig.add_trace(go.Scatter(x=[-l_horz_a/24, l_horz_a/24], y =[h-d, h-d], mode = 'lines',
+    fig.add_trace(go.Scatter(x=[-l_horz_a/24, l_horz_a/24], y =[0, 0], mode = 'lines',
                                  line = dict(color='black')))  
-    fig.add_trace(go.Scatter(x=[-l_horz_a/24, -l_horz_a/24], y =[h-d, h-d+l_vert_a/12], mode = 'lines',
+    fig.add_trace(go.Scatter(x=[-l_horz_a/24, -l_horz_a/24], y =[0, l_vert_a], mode = 'lines',
                                  line = dict(color='black')))  
-    fig.add_trace(go.Scatter(x=[l_horz_a/24, -l_horz_a/24], y =[h-d, h-d+l_vert_a/12], mode = 'lines',
+    fig.add_trace(go.Scatter(x=[l_horz_a/24, -l_horz_a/24], y =[0, l_vert_a], mode = 'lines',
                                  line = dict(color='black')))  
     
     # Node B 
+    fig.add_trace(go.Scatter(x=[l-l_horz_b/24, l+l_horz_b/24], y =[0, 0], mode = 'lines',
+                                 line = dict(color='black')))  
+    fig.add_trace(go.Scatter(x=[l+l_horz_b/24, l+l_horz_b/24], y =[0, l_vert_b], mode = 'lines',
+                                 line = dict(color='black')))  
+    fig.add_trace(go.Scatter(x=[l-l_horz_b/24, l+l_horz_b/24], y =[0, l_vert_b], mode = 'lines',
+                                 line = dict(color='black')))  
 
 
     fig.add_trace(go.Scatter(x=x, y=y, mode='lines', line=dict(color='black')))
 
     annotations = [
-    dict(x=.5, y=cover-3 , text="NODE A", showarrow=True, arrowhead=2, ax=-3, ay=-5), 
-    dict(x=l-.5, y=cover - 3, text="NODE B", showarrow=True, arrowhead=2, ax=-3, ay=-5),
+    dict(x=-1, y=-3 , text="NODE A", showarrow=True, arrowhead=2, ax=-3, ay=-5), 
+    dict(x=l+1, y= - 3, text="NODE B", showarrow=True, arrowhead=2, ax=-3, ay=-5),
     dict(x=a-.6, y=h+2, text="NODE C", showarrow=True, arrowhead=2, ax=-3, ay=-5), 
     dict(x=a/3.8, y=7, text=f"{round(math.degrees(strut_1_alpha),1)}°", showarrow=True, arrowhead=2, ax=-3, ay=-5),
     dict(x=l-1.4, y=7, text=f"{round(math.degrees(strut_2_alpha),1)}°", showarrow=True, arrowhead=2, ax=-3, ay=-5)]
@@ -287,6 +287,53 @@ def deep_transfer_calc(P_DL:float, P_LL:float, l:float, a:float, h:float, b:floa
             )
         )
     
+
+    dim_offset = 1
+    # Define the coordinates of the triangle_a
+    triangle_a = {
+        'x_nodea': [0, l_horz_a, 0, 0],
+        'y_nodea': [0, 0, l_vert_a, 0]
+    }
+
+    # Calculate the lengths of the sides
+    import math
+    side1 = math.sqrt((triangle_a['x_nodea'][1] - triangle_a['x_nodea'][0]) ** 2 + (triangle_a['y_nodea'][1] - triangle_a['y_nodea'][0]) ** 2)
+    side2 = math.sqrt((triangle_a['x_nodea'][2] - triangle_a['x_nodea'][1]) ** 2 + (triangle_a['y_nodea'][2] - triangle_a['y_nodea'][1]) ** 2)
+    side3 = math.sqrt((triangle_a['x_nodea'][2] - triangle_a['x_nodea'][0]) ** 2 + (triangle_a['y_nodea'][2] - triangle_a['y_nodea'][0]) ** 2)
+
+    # Create the figure
+    test_fig = go.Figure()
+
+    # Add the triangle_a
+    test_fig.add_trace(go.Scatter(x=triangle_a['x_nodea'], y=triangle_a['y_nodea'], mode='lines+markers', name='triangle_a'))
+
+    # # Add dimension lines and annotations
+    # test_fig.add_trace(go.Scatter(x=[triangle_a['x_nodea'][0], triangle_a['x_nodea'][1]], y=[triangle_a['y_nodea'][0], triangle_a['y_nodea'][1]], mode='lines', name='Side 1', line=dict(dash='dash')))
+    # test_fig.add_trace(go.Scatter(x=[triangle_a['x_nodea'][1], triangle_a['x_nodea'][2]], y=[triangle_a['y_nodea'][1], triangle_a['y_nodea'][2]], mode='lines', name='Side 2', line=dict(dash='dash')))
+    # test_fig.add_trace(go.Scatter(x=[triangle_a['x_nodea'][2], triangle_a['x_nodea'][0]], y=[triangle_a['y_nodea'][2], triangle_a['y_nodea'][0]], mode='lines', name='Side 3', line=dict(dash='dash')))
+
+    # Add text annotations for the lengths
+    test_fig.add_annotation(x=(triangle_a['x_nodea'][0] + triangle_a['x_nodea'][1]) / 2, y=(triangle_a['y_nodea'][0] + (triangle_a['y_nodea'][1]) / 2) -dim_offset,
+                    text=f'{side1:.2f}', showarrow=False, font=dict(size=12, color="black"), align="center")
+    test_fig.add_annotation(x=(triangle_a['x_nodea'][1] + (triangle_a['x_nodea'][2]) / 2)-2*dim_offset, y=(triangle_a['y_nodea'][1] + (triangle_a['y_nodea'][2]) / 2),
+                    text=f'{side2:.2f}', showarrow=False, font=dict(size=12, color="black"), align="center")
+    test_fig.add_annotation(x=(triangle_a['x_nodea'][2] + (triangle_a['x_nodea'][0]) / 2) - dim_offset, y=(triangle_a['y_nodea'][2] + triangle_a['y_nodea'][0]) / 2,
+                    text=f'{side3:.2f}', showarrow=False, font=dict(size=12, color="black"), align="center")
+
+    # Customize layout
+    test_fig.update_layout(title='Test Node A with Dimensions', showlegend= False, xaxis_title='X-axis', yaxis_title='Y-axis', xaxis=dict(
+                  # Specify the x-axis range
+                visible = False,
+                scaleanchor="y",
+                scaleratio=1,
+            ),
+            yaxis=dict(
+                visible = False, 
+                scaleanchor="x",
+                scaleratio=1,))
+
+
+    
     # Standlone Figure for Node B
     node_b_fig = go.Figure()
  
@@ -320,9 +367,9 @@ def deep_transfer_calc(P_DL:float, P_LL:float, l:float, a:float, h:float, b:floa
 
     node_c_fig.add_trace(go.Scatter(x=[0, l_horz_c], y =[0, 0], mode = 'lines',
                                  line = dict(color='black')))  
-    node_c_fig.add_trace(go.Scatter(x=[0, l_horz_c], y =[0, 0], mode = 'lines',
+    node_c_fig.add_trace(go.Scatter(x=[0, l_horz_c/2], y =[0, -l_vert_c_1], mode = 'lines',
                                  line = dict(color='black')))  
-    node_c_fig.add_trace(go.Scatter(x=[0, l_horz_c], y =[0, 0], mode = 'lines',
+    node_c_fig.add_trace(go.Scatter(x=[l_horz_c/2, l_horz_c], y =[-l_vert_c_1, 0], mode = 'lines',
                                  line = dict(color='black')))  
     
     node_c_fig.update_layout(
@@ -342,21 +389,27 @@ def deep_transfer_calc(P_DL:float, P_LL:float, l:float, a:float, h:float, b:floa
             )
         )
     
+    # Reinforcement Plot/Diagram
+
+    x, y = beam_poly.exterior.xy
+    x = list(x)  # Convert to list
+    y = list(y)  # Convert to list
+    reinf_fig = go.Figure(
+            data=go.Scatter(
+                x=x, 
+                y=y, 
+                mode='lines', 
+                fill='toself', 
+                line=dict(color='blue'),  # Customize line color
+                fillcolor='rgba(0, 0, 255, 0.1)'  # Customize fill color with transparency
+            )
+
+        
+        )
     
-    # l_horz_c = (Pu*1000)/(.75*fce_c*b)
-    # print(f'Pu = {Pu}')
-    # print(f'l_horz_c = {l_horz_c}')
-    # l_dia_c_1 = l_horz_c*(F_ac/Pu)
-    # print(f'l_dia_c1 = {l_dia_c_1}')
-    # l_dia_c_2 = l_horz_c*(F_bc/Pu)
-    # l_vert_c_1 = math.sqrt(l_dia_c_1**2 - (l_horz_c/2))
-
-
-
-
-
-
     
+
+
     # Tie Reinforcement 
     A_s_req = F_ab/(.75*fy)
 
@@ -366,8 +419,48 @@ def deep_transfer_calc(P_DL:float, P_LL:float, l:float, a:float, h:float, b:floa
 
     A_s = num_tie*tie_area
 
+    reinf_fig.add_trace(go.Scatter(x=[0, l], y =[h-d, h-d], mode = 'lines',
+                                 line = dict(color='black')))
+    
+    
+    
+    # Plot Skin Reinforcement 
+    num_skin_bars = math.ceil((d/s_req))
+    for i in range(1, num_skin_bars): 
+        y = i*s_req
+        reinf_fig.add_trace(go.Scatter(x=[0, l], y =[y, y], mode = 'lines',
+                                 line = dict(color='black')))
+        
+    # Plot Stirrups 
+ 
+    reinf_annotations = [
+    dict(x=l/2, y=cover+2 , text=f'({num_tie})-#{tie_size} Bottom Bars', showarrow=True, arrowhead=2, ax=-3, ay=-5)]
+
+
+
+    reinf_fig.update_layout(
+            title="Reinforcement Diagram",
+            xaxis_title="in",
+            yaxis_title="",
+            showlegend=False,
+            xaxis=dict(
+                  # Specify the x-axis range
+                scaleanchor="y",
+                scaleratio=12,
+            ),
+            yaxis=dict(
+                visible = False,
+                scaleanchor="x",
+                scaleratio=1,
+            ),
+            annotations= reinf_annotations
+        )  
+    
+    
+    
+    
     results_dict = {'Phi-Vn': phi_Vn, 'Number of ties':num_tie, 'Strut and Tie Model': fig, 
                     'alpha_1':strut_1_alpha, 'alpha_2':strut_2_alpha, 'Node A Figure': node_a_fig, 'Node B Figure': node_b_fig,
-                    'Node C Figure': node_c_fig}
+                    'Node C Figure': node_c_fig, 'Reinforcement Diagram': reinf_fig, 'Test Fig':test_fig}
 
     return results_dict
